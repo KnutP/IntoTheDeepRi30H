@@ -2,15 +2,16 @@ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 
+
 public class Robot {
 
-    private DcMotor lfDrive, lbDrive, rfDrive, rbDrive, intake, lift, ascend;
-    private Servo extendServo, intakeServo, hopperServo;
+    private DcMotor lfDrive, lbDrive, rfDrive, rbDrive, intake, lShooter, rShooter, arm;
+    private Servo grabber;
 
+    private HardwareMap hwMap;
     OpMode opMode;
 
     private static final double WIDTH = 13.75;
@@ -19,32 +20,34 @@ public class Robot {
 
     public void init(HardwareMap ahwMap, OpMode op) {
         // Save reference to Hardware map
+        this.hwMap = ahwMap;
         this.opMode = op;
 
-        this.extendServo = ahwMap.get(Servo.class, "extendServo");
-        this.intakeServo = ahwMap.get(Servo.class, "intakeServo");
-        this.hopperServo = ahwMap.get(Servo.class, "hopperServo");
+        this.grabber = hwMap.get(Servo.class, "grabber");
 
         // Define and Initialize Motors
-        this.lfDrive  = ahwMap.get(DcMotor.class, "lfDrive");
-        this.lbDrive  = ahwMap.get(DcMotor.class, "lbDrive");
-        this.rfDrive  = ahwMap.get(DcMotor.class, "rfDrive");
-        this.rbDrive  = ahwMap.get(DcMotor.class, "rbDrive");
+        this.lfDrive  = hwMap.get(DcMotor.class, "lfDrive");
+        this.lbDrive  = hwMap.get(DcMotor.class, "lbDrive");
+        this.rfDrive = hwMap.get(DcMotor.class, "rfDrive");
+        this.rbDrive = hwMap.get(DcMotor.class, "rbDrive");
         lfDrive.setDirection(DcMotor.Direction.REVERSE);
-        lbDrive.setDirection(DcMotor.Direction.REVERSE);
+        lbDrive.setDirection((DcMotor.Direction.REVERSE));
         rfDrive.setDirection(DcMotor.Direction.FORWARD);
-        rbDrive.setDirection(DcMotor.Direction.FORWARD);
+        rbDrive.setDirection((DcMotor.Direction.FORWARD));
 
-        this.intake = ahwMap.get(DcMotor.class, "intake");
-        this.lift   = ahwMap.get(DcMotor.class, "lift");
-        this.ascend = ahwMap.get(DcMotor.class, "ascend");
+        this.intake  = hwMap.get(DcMotor.class, "intake");
+        this.arm  = hwMap.get(DcMotor.class, "arm");
+        this.lShooter = hwMap.get(DcMotor.class, "lShooter");
+        this.rShooter = hwMap.get(DcMotor.class, "rShooter");
         intake.setDirection(DcMotor.Direction.REVERSE);
-        lift.setDirection(DcMotor.Direction.REVERSE);
-        ascend.setDirection(DcMotorSimple.Direction.FORWARD);
+        arm.setDirection((DcMotor.Direction.FORWARD));
+        lShooter.setDirection(DcMotor.Direction.FORWARD);
+        rShooter.setDirection(DcMotor.Direction.REVERSE);
 
         stop();
 
-        setDriveMotorMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        setMotorMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        setMotorMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         lfDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         lbDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -53,16 +56,10 @@ public class Robot {
 
     }
 
-    public void setExtendPosition(double position){
-        this.extendServo.setPosition(position);
-    }
 
-    public void setHopperPosition(double position){
-        this.hopperServo.setPosition(position);
-    }
 
-    public void setIntakePosition(double position){
-        this.intakeServo.setPosition(position);
+    public void setGrabberPosition(double position){
+        grabber.setPosition(position);
     }
 
     public void skidSteerDrive(double lPower, double rPower){
@@ -97,22 +94,25 @@ public class Robot {
     // Helper function for power scaling in the drive method
     private double findMax(double... vals) {
         double max = Double.NEGATIVE_INFINITY;
+
         for (double d : vals) {
             if (d > max) max = d;
         }
+
         return max;
     }
 
+    public void setShooterPower(double power) {
+        lShooter.setPower(power);
+        rShooter.setPower(power);
+    }
+
     public void setIntakePower(double power) {
-        this.intake.setPower(power);
+        intake.setPower(power);
     }
 
-    public void setLiftPower(double power) {
-        this.lift.setPower(power);
-    }
-
-    public void setAscendPower(double power) {
-        this.ascend.setPower(power);
+    public void setArmPower(double power) {
+        arm.setPower(power);
     }
 
     public void stop(){
@@ -122,7 +122,7 @@ public class Robot {
         rbDrive.setPower(0);
     }
 
-    public void setDriveMotorMode(DcMotor.RunMode mode) {
+    public void setMotorMode(DcMotor.RunMode mode) {
         rfDrive.setMode(mode);
         rbDrive.setMode(mode);
         lfDrive.setMode(mode);

@@ -17,14 +17,8 @@ public class Teleop extends OpMode {
     double xVelocity;
     double yVelocity;
     double wVelocity;
-    boolean isIntakeOut = false;
-    boolean isExtend = false;
-    enum HopperPosition {
-        IN,
-        STAGE,
-        DUMP
-    }
-    HopperPosition hopperPosition = HopperPosition.IN;
+    boolean isShooting = false;
+    boolean isGrabbing = false;
 
     @Override
     public void init() {
@@ -32,6 +26,10 @@ public class Teleop extends OpMode {
 
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
+    }
+
+    @Override
+    public void init_loop() {
     }
 
     @Override
@@ -54,79 +52,53 @@ public class Teleop extends OpMode {
 
         robot.mechanumDrive(xVelocity, yVelocity, wVelocity);
 
+        // Shooter
+        if(gamepad1.y) {
+            isShooting = true;
+        } else if(gamepad1.a) {
+            isShooting = false;
+        }
 
         // Intake
-        if (gamepad1.left_bumper) { // in
+        if(gamepad1.dpad_up) {
+            robot.setIntakePower(-1);
+        } else if (gamepad1.dpad_down) {
             robot.setIntakePower(1);
-        } else if (gamepad1.left_trigger > 0.2) { // out
-            robot.setIntakePower(-gamepad1.left_trigger);
         } else {
             robot.setIntakePower(gamepad2.left_stick_y);
         }
 
-        // Intake Servo
-        if (gamepad1.x || gamepad2.right_bumper) { // in
-            isIntakeOut = false;
-        } else if (gamepad1.b || gamepad2.right_trigger > 0.2) { // out
-            isIntakeOut = true;
+
+
+        // ***** OPERATOR CODE *****
+
+        // Shooter
+        if(gamepad2.y) {
+            isShooting = true;
+        } else if(gamepad2.a) {
+            isShooting = false;
         }
 
-        if (isIntakeOut) { // out
-            robot.setIntakePosition(0);
-        } else { // in
-            robot.setIntakePosition(1);
-        }
-
-        // Hopper position
-        if (gamepad1.dpad_up || gamepad2.dpad_up) {
-            hopperPosition = HopperPosition.DUMP;
-        }
-        else if (gamepad1.dpad_down || gamepad2.dpad_down) {
-            hopperPosition = HopperPosition.IN;
-        }
-
-        if (hopperPosition == HopperPosition.IN) {
-            robot.setHopperPosition(1);
-        } else if (hopperPosition == HopperPosition.DUMP) {
-            robot.setHopperPosition(0);
-        }
-
-        // ASCEND
-        if (gamepad1.dpad_left || gamepad2.dpad_left) {
-            robot.setAscendPower(1);
-        } else if (gamepad1.dpad_right || gamepad2.dpad_right) {
-            robot.setAscendPower(-1);
+        if(isShooting) {
+            robot.setShooterPower(1);
         } else {
-            robot.setAscendPower(0);
+            robot.setShooterPower(0);
         }
 
+        // Arm
+        robot.setArmPower(gamepad2.right_stick_y);
 
-        // Extend position
-        if(gamepad1.y || gamepad2.y) {
-            isExtend = true;
-        } else if(gamepad1.a || gamepad2.a) {
-            isExtend = false;
+        if(gamepad2.right_bumper) {
+            isGrabbing = true;
+        } else if (gamepad2.right_trigger > 0.5) {
+            isGrabbing = false;
         }
 
-        if(isExtend) {
-            robot.setExtendPosition(1);
+        if(isGrabbing) {
+            robot.setGrabberPosition(1);
         } else {
-            robot.setExtendPosition(0);
+            robot.setGrabberPosition(0);
         }
-
-
-        // Lift
-        if (gamepad1.right_bumper) {
-            robot.setLiftPower(1);
-        } else if (gamepad1.right_trigger > 0.2) {
-            robot.setLiftPower(-gamepad1.right_trigger);
-        }
-        else if (Math.abs(gamepad2.right_stick_y) > 0.2) {
-            robot.setLiftPower(gamepad2.right_stick_y);
-        } else {
-            robot.setLiftPower(0);
-        }
-
 
     }
 
