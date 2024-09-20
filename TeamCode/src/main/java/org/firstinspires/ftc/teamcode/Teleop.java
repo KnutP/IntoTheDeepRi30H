@@ -4,7 +4,6 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.robotcore.util.Range;
 
 @TeleOp(name = "Ri30HTeleop", group = "Iterative Opmode")
 //@Disabled
@@ -13,25 +12,25 @@ public class Teleop extends OpMode {
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
     private Robot robot = new Robot();
-
-    double xVelocity;
-    double yVelocity;
-    double wVelocity;
-    boolean isIntakeOut = false;
-    boolean isExtend = false;
-    enum HopperPosition {
-        IN,
-        STAGE,
-        DUMP
-    }
-    HopperPosition hopperPosition = HopperPosition.IN;
+    private enum ClampPosition {open, closed}
+    private ClampPosition clampPosition = ClampPosition.open;
+    private enum PivotPosition {in, out}
+    private PivotPosition pivotPosition = PivotPosition.in;
+    private enum KickerPosition {in, out}
+    private KickerPosition kickerPosition = KickerPosition.in;
 
     @Override
     public void init() {
+        telemetry.addData("Status", "Initialized");
+
         robot.init(hardwareMap, this);
 
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
+    }
+
+    @Override
+    public void init_loop() {
     }
 
     @Override
@@ -45,90 +44,86 @@ public class Teleop extends OpMode {
         // ***** DRIVER CODE *****
 
         // Drivetrain
-        yVelocity = gamepad1.left_stick_y*Math.abs(gamepad1.left_stick_y);
-        xVelocity = -gamepad1.left_stick_x*Math.abs(gamepad1.left_stick_x);
-        wVelocity = gamepad1.right_stick_x*Math.abs(gamepad1.right_stick_x)/4;
-        yVelocity = Range.clip(yVelocity, -1.0, 1.0);
-        xVelocity = Range.clip(xVelocity, -1.0, 1.0);
-        wVelocity = Range.clip(wVelocity, -1.0, 1.0);
+        double lPower;
+        double rPower;
+        lPower = Math.abs(gamepad1.left_stick_y)*gamepad1.left_stick_y*0.6;
+        rPower = Math.abs(-gamepad1.right_stick_y)*gamepad1.right_stick_y*0.6;
+        robot.drive(lPower, rPower);
 
-        robot.mechanumDrive(xVelocity, yVelocity, wVelocity);
 
+        // ***** OPERATOR CODE *****
 
         // Intake
-        if (gamepad1.left_bumper) { // in
-            robot.setIntakePower(1);
-        } else if (gamepad1.left_trigger > 0.2) { // out
-            robot.setIntakePower(-gamepad1.left_trigger);
-        } else {
-            robot.setIntakePower(gamepad2.left_stick_y);
-        }
-
-        // Intake Servo
-        if (gamepad1.x || gamepad2.right_bumper) { // in
-            isIntakeOut = false;
-        } else if (gamepad1.b || gamepad2.right_trigger > 0.2) { // out
-            isIntakeOut = true;
-        }
-
-        if (isIntakeOut) { // out
-            robot.setIntakePosition(0);
-        } else { // in
-            robot.setIntakePosition(1);
-        }
-
-        // Hopper position
-        if (gamepad1.dpad_up || gamepad2.dpad_up) {
-            hopperPosition = HopperPosition.DUMP;
-        }
-        else if (gamepad1.dpad_down || gamepad2.dpad_down) {
-            hopperPosition = HopperPosition.IN;
-        }
-
-        if (hopperPosition == HopperPosition.IN) {
-            robot.setHopperPosition(1);
-        } else if (hopperPosition == HopperPosition.DUMP) {
-            robot.setHopperPosition(0);
-        }
-
-        // ASCEND
-        if (gamepad1.dpad_left || gamepad2.dpad_left) {
-            robot.setAscendPower(1);
-        } else if (gamepad1.dpad_right || gamepad2.dpad_right) {
-            robot.setAscendPower(-1);
-        } else {
-            robot.setAscendPower(0);
-        }
-
-
-        // Extend position
-        if(gamepad1.y || gamepad2.y) {
-            isExtend = true;
-        } else if(gamepad1.a || gamepad2.a) {
-            isExtend = false;
-        }
-
-        if(isExtend) {
-            robot.setExtendPosition(1);
-        } else {
-            robot.setExtendPosition(0);
-        }
-
+        robot.setIntakePower(gamepad2.left_stick_y);
 
         // Lift
-        if (gamepad1.right_bumper) {
-            robot.setLiftPower(1);
-        } else if (gamepad1.right_trigger > 0.2) {
-            robot.setLiftPower(-gamepad1.right_trigger);
+        robot.setLiftPower(0.5*gamepad2.right_stick_y);
+
+        if(gamepad2.a){
+            robot.setCapstonePosition(1);
         }
-        else if (Math.abs(gamepad2.right_stick_y) > 0.2) {
-            robot.setLiftPower(gamepad2.right_stick_y);
-        } else {
-            robot.setLiftPower(0);
+        if(gamepad2.b){
+            robot.setCapstonePosition(0.4);
+        }
+        if(gamepad2.y){
+            robot.setCapstonePosition(0.3);
+        }
+
+        // Pivot positions
+        if(gamepad2.dpad_down){
+            pivotPosition = PivotPosition.in;
+        } else if(gamepad2.dpad_up){
+            pivotPosition = PivotPosition.out;
+        }
+        switch(pivotPosition){
+            case in:
+                robot.setPivotPosition(1);
+                break;
+            case out:
+                robot.setPivotPosition(0.17);
+                break;
+            default:
+                robot.setPivotPosition(1);
+                break;
         }
 
 
+        // Clamp positions
+        if(gamepad2.right_bumper){
+            clampPosition = ClampPosition.open;
+        } else if(gamepad2.right_trigger > 0.5){
+            clampPosition = ClampPosition.closed;
+        }
+        switch(clampPosition){
+            case open:
+                robot.setClampPosition(0);
+                break;
+            case closed:
+                robot.setClampPosition(0.7);
+                break;
+            default:
+                robot.setClampPosition(0);
+                break;
+        }
+
+    // Kicker positions
+        if(gamepad2.left_bumper){
+        kickerPosition = KickerPosition.out;
+    } else if(gamepad2.left_trigger > 0.5){
+        kickerPosition = KickerPosition.in;
     }
+        switch(kickerPosition){
+        case out:
+            robot.setKickerPosition(0);
+            break;
+        case in:
+            robot.setKickerPosition(0.4);
+            break;
+        default:
+            robot.setClampPosition(0);
+            break;
+    }
+}
 
     @Override
     public void stop() {
