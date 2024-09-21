@@ -11,20 +11,18 @@ import com.qualcomm.robotcore.util.Range;
 public class Teleop extends OpMode {
 
     // Declare OpMode members.
-    private ElapsedTime runtime = new ElapsedTime();
-    private Robot robot = new Robot();
+    private final ElapsedTime runtime = new ElapsedTime();
+    private final Robot robot = new Robot();
 
     double xVelocity;
     double yVelocity;
     double wVelocity;
-    boolean isIntakeOut = false;
-    boolean isExtend = false;
-    enum HopperPosition {
-        IN,
-        STAGE,
-        DUMP
-    }
-    HopperPosition hopperPosition = HopperPosition.IN;
+    double armPower;
+    double gripperDown = 1;
+    double gripperUp = 0.65;
+    boolean isGripping = false;
+    boolean isFiring = false;
+    boolean isPlaneUp = false;
 
     @Override
     public void init() {
@@ -35,14 +33,16 @@ public class Teleop extends OpMode {
     }
 
     @Override
+    public void init_loop() {
+    }
+
+    @Override
     public void start() {
         runtime.reset();
     }
 
     @Override
     public void loop() {
-
-        // ***** DRIVER CODE *****
 
         // Drivetrain
         yVelocity = gamepad1.left_stick_y*Math.abs(gamepad1.left_stick_y);
@@ -54,77 +54,54 @@ public class Teleop extends OpMode {
 
         robot.mechanumDrive(xVelocity, yVelocity, wVelocity);
 
-
-        // Intake
-        if (gamepad1.left_bumper) { // in
-            robot.setIntakePower(1);
-        } else if (gamepad1.left_trigger > 0.2) { // out
-            robot.setIntakePower(-gamepad1.left_trigger);
+        // Arm
+        if(gamepad1.left_bumper || gamepad2.dpad_up) {
+            armPower = 0.7; // up
+        } else if (gamepad1.left_trigger > 0.5 || gamepad2.dpad_down) {
+            armPower = -0.7; // down
         } else {
-            robot.setIntakePower(gamepad2.left_stick_y);
+            armPower = 0;
         }
 
-        // Intake Servo
-        if (gamepad1.x || gamepad2.right_bumper) { // in
-            isIntakeOut = false;
-        } else if (gamepad1.b || gamepad2.right_trigger > 0.2) { // out
-            isIntakeOut = true;
+        robot.setArmPower(armPower);
+
+
+//         Scoop
+        if(gamepad1.right_bumper || gamepad2.right_bumper) {
+            isGripping = false;
+        } else if (gamepad1.right_trigger > 0.5 || gamepad2.right_trigger > 0.5) {
+            isGripping = true;
         }
 
-        if (isIntakeOut) { // out
-            robot.setIntakePosition(0);
-        } else { // in
-            robot.setIntakePosition(1);
-        }
-
-        // Hopper position
-        if (gamepad1.dpad_up || gamepad2.dpad_up) {
-            hopperPosition = HopperPosition.DUMP;
-        }
-        else if (gamepad1.dpad_down || gamepad2.dpad_down) {
-            hopperPosition = HopperPosition.IN;
-        }
-
-        if (hopperPosition == HopperPosition.IN) {
-            robot.setHopperPosition(1);
-        } else if (hopperPosition == HopperPosition.DUMP) {
-            robot.setHopperPosition(0);
-        }
-
-        // ASCEND
-        if (gamepad1.dpad_left || gamepad2.dpad_left) {
-            robot.setAscendPower(1);
-        } else if (gamepad1.dpad_right || gamepad2.dpad_right) {
-            robot.setAscendPower(-1);
+        if(isGripping) {
+            robot.setGripperPosition(gripperDown);
         } else {
-            robot.setAscendPower(0);
+            robot.setGripperPosition(gripperUp);
         }
 
 
-        // Extend position
-        if(gamepad1.y || gamepad2.y) {
-            isExtend = true;
-        } else if(gamepad1.a || gamepad2.a) {
-            isExtend = false;
+        if(gamepad1.dpad_up) {
+            isPlaneUp = true;
+        } else if (gamepad1.dpad_down) {
+            isPlaneUp = false;
         }
 
-        if(isExtend) {
-            robot.setExtendPosition(1);
+        if(isPlaneUp) {
+            robot.setPitchPosition(0);
         } else {
-            robot.setExtendPosition(0);
+            robot.setPitchPosition(1);
         }
 
-
-        // Lift
-        if (gamepad1.right_bumper) {
-            robot.setLiftPower(1);
-        } else if (gamepad1.right_trigger > 0.2) {
-            robot.setLiftPower(-gamepad1.right_trigger);
+        if(gamepad1.y) {
+            isFiring = true;
+        } else if (gamepad1.a) {
+            isFiring = false;
         }
-        else if (Math.abs(gamepad2.right_stick_y) > 0.2) {
-            robot.setLiftPower(gamepad2.right_stick_y);
+
+        if(isFiring){
+            robot.setFirePosition(1);
         } else {
-            robot.setLiftPower(0);
+            robot.setFirePosition(0);
         }
 
 
